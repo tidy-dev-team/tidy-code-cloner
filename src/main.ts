@@ -46,6 +46,14 @@ function cloneTopLevelNodesIntoFrame(sourcePage: PageNode, targetFrame: FrameNod
   for (const node of sourcePage.children) {
     targetFrame.appendChild(node.clone())
   }
+  // Apply auto layout to the frame: vertical direction, centered, default spacing.
+  targetFrame.layoutMode = 'VERTICAL'
+  targetFrame.itemSpacing = 16
+  targetFrame.primaryAxisAlignItems = 'MIN'
+  targetFrame.counterAxisAlignItems = 'CENTER'
+  // Set both width and height to hug contents.
+  targetFrame.primaryAxisSizingMode = 'AUTO'
+  targetFrame.counterAxisSizingMode = 'AUTO'
 }
 
 function stackFramesVertically(frames: Array<FrameNode>, spacing: number): void {
@@ -84,6 +92,7 @@ function packPages(): void {
     frames.push(frame)
   }
 
+  // After applying auto layout, we still want some spacing between the page-frames themselves.
   stackFramesVertically(frames, 200)
 
   figma.currentPage.selection = frames
@@ -95,21 +104,30 @@ function packPages(): void {
 }
 
 function unpackPages(): void {
+  console.log('[TCC] Unpack started')
+  
+  let sourcePage: PageNode
   const tempPage = figma.root.children.find((page) => isTempPage(page))
+  
   if (tempPage === undefined) {
-    figma.notify(`Missing ${TEMP_PAGE_NAME} page. Paste your packed frames first.`)
-    return
-  }
-
-  if (figma.currentPage.id !== tempPage.id) {
-    figma.currentPage = tempPage
+    console.log(`[TCC] ${TEMP_PAGE_NAME} not found, using current page: ${figma.currentPage.name}`)
+    sourcePage = figma.currentPage
+  } else {
+    console.log(`[TCC] Found ${TEMP_PAGE_NAME}, using it as source`)
+    sourcePage = tempPage
+    if (figma.currentPage.id !== tempPage.id) {
+      figma.currentPage = tempPage
+    }
   }
 
   // Only unpack top-level frames.
-  const frames = tempPage.children.filter((node): node is FrameNode => node.type === 'FRAME')
+  const frames = sourcePage.children.filter((node): node is FrameNode => node.type === 'FRAME')
+  console.log(`[TCC] Found ${frames.length} top-level frames on page "${sourcePage.name}"`)
 
   if (frames.length === 0) {
-    figma.notify(`No top-level frames found on ${TEMP_PAGE_NAME}.`)
+    const msg = `No top-level frames found on page "${sourcePage.name}".`
+    console.log(`[TCC] ${msg}`)
+    figma.notify(msg)
     return
   }
 
@@ -118,6 +136,7 @@ function unpackPages(): void {
   for (const frame of frames) {
     const preferredName = frame.getPluginData('tcc:pageName') || frame.name
     const pageName = getUniquePageName(preferredName)
+    console.log(`[TCC] Creating page "${pageName}" from frame "${frame.name}"`)
 
     const page = figma.createPage()
     page.name = pageName
@@ -125,6 +144,7 @@ function unpackPages(): void {
 
     // Move children from frame -> page.
     const children = [...frame.children]
+    console.log(`[TCC] Moving ${children.length} children from frame to page`)
     for (const child of children) {
       page.appendChild(child)
     }
@@ -135,9 +155,9 @@ function unpackPages(): void {
 
   figma.currentPage = figma.root.children[figma.root.children.length - 1]
 
-  figma.notify(
-    `Unpacked ${createdPagesCount} page${createdPagesCount === 1 ? '' : 's'} from ${TEMP_PAGE_NAME}.`
-  )
+  const msg = `Unpacked ${createdPagesCount} page${createdPagesCount === 1 ? '' : 's'}.`
+  console.log(`[TCC] ${msg}`)
+  figma.notify(msg)
 }
 
 export default function () {
