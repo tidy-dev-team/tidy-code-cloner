@@ -1,4 +1,4 @@
-import { once, showUI } from "@create-figma-plugin/utilities";
+import { on, once, showUI } from "@create-figma-plugin/utilities";
 
 import {
   CloseHandler,
@@ -289,15 +289,15 @@ function unpackPages(): void {
 }
 
 export default function () {
-  once<PackPagesHandler>("PACK_PAGES", function () {
+  on<PackPagesHandler>("PACK_PAGES", function () {
     packPages();
   });
 
-  once<UnpackPagesHandler>("UNPACK_PAGES", function () {
+  on<UnpackPagesHandler>("UNPACK_PAGES", function () {
     unpackPages();
   });
 
-  once<FindBoundVariablesHandler>("FIND_BOUND_VARIABLES", function () {
+  on<FindBoundVariablesHandler>("FIND_BOUND_VARIABLES", function () {
     findNodesWithBoundVariables();
   });
 
