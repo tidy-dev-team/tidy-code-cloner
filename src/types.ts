@@ -1,8 +1,13 @@
 import { EventHandler } from "@create-figma-plugin/utilities";
 
+export interface PageInfo {
+  id: string;
+  name: string;
+}
+
 export interface PackPagesHandler extends EventHandler {
   name: "PACK_PAGES";
-  handler: () => void;
+  handler: (pageIds: string[]) => void;
 }
 
 export interface UnpackPagesHandler extends EventHandler {
@@ -23,4 +28,14 @@ export interface CloseHandler extends EventHandler {
 export interface OperationCompleteHandler extends EventHandler {
   name: "OPERATION_COMPLETE";
   handler: () => void;
+}
+
+export interface GetPagesHandler extends EventHandler {
+  name: "GET_PAGES";
+  handler: () => void;
+}
+
+export interface PagesListHandler extends EventHandler {
+  name: "PAGES_LIST";
+  handler: (pages: PageInfo[]) => void;
 }

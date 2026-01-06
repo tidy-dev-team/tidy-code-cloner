@@ -3,8 +3,11 @@ import { emit, on, once, showUI } from "@create-figma-plugin/utilities";
 import {
   CloseHandler,
   FindBoundVariablesHandler,
+  GetPagesHandler,
   OperationCompleteHandler,
   PackPagesHandler,
+  PageInfo,
+  PagesListHandler,
   UnpackPagesHandler,
 } from "./types";
 
@@ -220,12 +223,19 @@ function findNodesWithBoundVariables(): void {
   );
 }
 
-function packPages(): void {
-  const sourcePages = figma.root.children.filter(
+function packPages(pageIds: string[]): void {
+  // Filter to only selected pages (excluding temp page)
+  const allPages = figma.root.children.filter(
     (page) => isTempPage(page) === false
   );
+
+  const sourcePages =
+    pageIds.length > 0
+      ? allPages.filter((page) => pageIds.includes(page.id))
+      : allPages;
+
   if (sourcePages.length === 0) {
-    figma.notify("No pages found to pack.");
+    figma.notify("No pages selected to pack.");
     return;
   }
 
@@ -362,9 +372,20 @@ function unpackPages(): void {
   figma.notify(msg);
 }
 
+function sendPagesList(): void {
+  const pages: PageInfo[] = figma.root.children
+    .filter((page) => isTempPage(page) === false)
+    .map((page) => ({ id: page.id, name: page.name }));
+  emit<PagesListHandler>("PAGES_LIST", pages);
+}
+
 export default function () {
-  on<PackPagesHandler>("PACK_PAGES", function () {
-    packPages();
+  on<GetPagesHandler>("GET_PAGES", function () {
+    sendPagesList();
+  });
+
+  on<PackPagesHandler>("PACK_PAGES", function (pageIds: string[]) {
+    packPages(pageIds);
     emit<OperationCompleteHandler>("OPERATION_COMPLETE");
   });
 
@@ -383,7 +404,7 @@ export default function () {
   });
 
   showUI({
-    height: 200,
-    width: 240,
+    height: 400,
+    width: 280,
   });
 }
