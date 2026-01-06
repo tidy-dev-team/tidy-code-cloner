@@ -76,16 +76,53 @@ function calculateBoundingBox(nodes: ReadonlyArray<SceneNode>): {
   };
 }
 
+/**
+ * Clones a single node, handling SectionNodes specially.
+ * Sections cannot be parented under frames, so we convert them to frames
+ * and clone their children instead, preserving metadata for later restoration.
+ */
+function cloneNodeForPacking(
+  node: SceneNode,
+  targetFrame: FrameNode
+): SceneNode {
+  if (node.type === "SECTION") {
+    // SectionNodes cannot be children of FrameNodes.
+    // Create a frame to represent the section and clone its children.
+    const sectionFrame = figma.createFrame();
+    sectionFrame.name = node.name;
+    sectionFrame.x = node.x;
+    sectionFrame.y = node.y;
+    sectionFrame.resize(node.width, node.height);
+
+    // Mark this frame as a converted section for unpacking
+    sectionFrame.setPluginData("tcc:wasSection", "true");
+    sectionFrame.setPluginData("tcc:sectionName", node.name);
+
+    // Clone section's children into the frame
+    for (const child of node.children) {
+      const clonedChild = cloneNodeForPacking(child, sectionFrame);
+      // Position is already correct relative to the section
+    }
+
+    targetFrame.appendChild(sectionFrame);
+    return sectionFrame;
+  } else {
+    // Regular node - just clone it
+    const cloned = node.clone();
+    targetFrame.appendChild(cloned);
+    return cloned;
+  }
+}
+
 function cloneTopLevelNodesIntoFrame(
   sourcePage: PageNode,
   targetFrame: FrameNode
 ): void {
   // Clone only top-level nodes. This avoids bringing the whole page node itself.
-  // `clone()` keeps locked/hidden status as-is.
+  // Handle SectionNodes specially since they cannot be children of frames.
   const clonedNodes: Array<SceneNode> = [];
   for (const node of sourcePage.children) {
-    const cloned = node.clone();
-    targetFrame.appendChild(cloned);
+    const cloned = cloneNodeForPacking(node, targetFrame);
     clonedNodes.push(cloned);
   }
 
@@ -224,6 +261,43 @@ function packPages(): void {
   );
 }
 
+/**
+ * Recursively restores nodes that were originally sections.
+ * Frames marked with tcc:wasSection are converted back to SectionNodes.
+ */
+function restoreSectionsRecursively(
+  node: SceneNode,
+  targetParent: PageNode | SectionNode
+): void {
+  if (
+    node.type === "FRAME" &&
+    node.getPluginData("tcc:wasSection") === "true"
+  ) {
+    // This frame was originally a section - recreate it
+    const sectionName =
+      node.getPluginData("tcc:sectionName") || node.name;
+    console.log(`[TCC] Restoring section: ${sectionName}`);
+
+    const section = figma.createSection();
+    section.name = sectionName;
+    section.x = node.x;
+    section.y = node.y;
+    section.resizeWithoutConstraints(node.width, node.height);
+
+    // Move children to the section, recursively restoring nested sections
+    const children = [...node.children];
+    for (const child of children) {
+      restoreSectionsRecursively(child, section);
+    }
+
+    targetParent.appendChild(section);
+    node.remove();
+  } else {
+    // Regular node - just move it to the target parent
+    targetParent.appendChild(node);
+  }
+}
+
 function unpackPages(): void {
   console.log("[TCC] Unpack started");
 
@@ -269,11 +343,11 @@ function unpackPages(): void {
     page.name = pageName;
     figma.root.insertChild(figma.root.children.length, page);
 
-    // Move children from frame -> page.
+    // Move children from frame -> page, restoring sections where needed.
     const children = [...frame.children];
     console.log(`[TCC] Moving ${children.length} children from frame to page`);
     for (const child of children) {
-      page.appendChild(child);
+      restoreSectionsRecursively(child, page);
     }
 
     frame.remove();
