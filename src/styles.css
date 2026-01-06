@@ -1,0 +1,14 @@
+.select-button label {
+  pointer-events: none;
+}
+
+.wrapper-div {
+  padding: 4px 8px;
+  padding-bottom: 8px;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--figma-color-border);
+}
+
+.wrapper-div label div {
+  padding-top: 0 !important;
+}

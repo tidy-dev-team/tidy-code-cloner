@@ -7,7 +7,7 @@ import {
   Text,
   VerticalSpace,
 } from "@create-figma-plugin/ui";
-import { emit, on } from "@create-figma-plugin/utilities";
+import { emit, on, MIXED_BOOLEAN } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
@@ -20,6 +20,7 @@ import {
   PagesListHandler,
   UnpackPagesHandler,
 } from "./types";
+import "!./styles.css";
 
 interface PageSelection extends PageInfo {
   selected: boolean;
@@ -29,6 +30,9 @@ function Plugin() {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [pages, setPages] = useState<PageSelection[]>([]);
+  const [value, setValue] = useState<boolean | typeof MIXED_BOOLEAN>(
+    MIXED_BOOLEAN
+  );
 
   useEffect(() => {
     on<OperationCompleteHandler>("OPERATION_COMPLETE", () => {
@@ -132,46 +136,13 @@ function Plugin() {
         }}
       >
         <Text style={{ fontWeight: "bold" }}>Pages to pack</Text>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            onClick={handleSelectAll}
-            hidden={allSelected}
-            style={{
-              background: "none",
-              border: "none",
-              color: allSelected
-                ? "var(--figma-color-text-disabled)"
-                : "var(--figma-color-text-brand)",
-              cursor: allSelected ? "default" : "pointer",
-              fontSize: "11px",
-              padding: "2px 4px",
-            }}
-          >
-            All
-          </button>
-          <button
-            onClick={handleDeselectAll}
-            hidden={!allSelected}
-            style={{
-              background: "none",
-              border: "none",
-              color: noneSelected
-                ? "var(--figma-color-text-disabled)"
-                : "var(--figma-color-text-brand)",
-              cursor: noneSelected ? "default" : "pointer",
-              fontSize: "11px",
-              padding: "2px 4px",
-            }}
-          >
-            None
-          </button>
-        </div>
       </div>
 
       <VerticalSpace space="extraSmall" />
 
       {/* Scrollable page list */}
       <div
+        className={"select-wrapper"}
         style={{
           maxHeight: "150px",
           overflowY: "auto",
@@ -180,6 +151,56 @@ function Plugin() {
           padding: "4px 0",
         }}
       >
+        <div className="wrapper-div">
+          <button
+            className={"select-button select-false"}
+            onClick={handleSelectAll}
+            hidden={allSelected || !noneSelected} // Hide when all selected OR when NOT none selected
+            style={{
+              background: "none",
+              border: "none",
+              color: allSelected
+                ? "var(--figma-color-text-disabled)"
+                : "var(--figma-color-text-brand)",
+              cursor: allSelected ? "default" : "pointer",
+              fontSize: "11px",
+            }}
+          >
+            <Checkbox value={false}>Select all</Checkbox>
+          </button>
+          <button
+            className={"select-button select-mixed"}
+            onClick={handleDeselectAll}
+            hidden={allSelected || noneSelected} // Hide when all selected OR none selected
+            style={{
+              background: "none",
+              border: "none",
+              color: noneSelected
+                ? "var(--figma-color-text-disabled)"
+                : "var(--figma-color-text-brand)",
+              cursor: noneSelected ? "default" : "pointer",
+              fontSize: "11px",
+            }}
+          >
+            <Checkbox value={value}>Select none</Checkbox>
+          </button>
+          <button
+            className={"select-button select-true"}
+            onClick={handleDeselectAll}
+            hidden={!allSelected || noneSelected} // Hide when NOT all selected OR none selected
+            style={{
+              background: "none",
+              border: "none",
+              color: noneSelected
+                ? "var(--figma-color-text-disabled)"
+                : "var(--figma-color-text-brand)",
+              cursor: noneSelected ? "default" : "pointer",
+              fontSize: "11px",
+            }}
+          >
+            <Checkbox value={true}>Select none</Checkbox>
+          </button>
+        </div>
         {pages.map((page) => (
           <div
             key={page.id}
