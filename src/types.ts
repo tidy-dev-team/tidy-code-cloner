@@ -19,3 +19,8 @@ export interface CloseHandler extends EventHandler {
   name: "CLOSE";
   handler: () => void;
 }
+
+export interface OperationCompleteHandler extends EventHandler {
+  name: "OPERATION_COMPLETE";
+  handler: () => void;
+}
