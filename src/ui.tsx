@@ -148,7 +148,6 @@ function Plugin() {
           overflowY: "auto",
           border: "1px solid var(--figma-color-border)",
           borderRadius: "4px",
-          padding: "4px 0",
         }}
       >
         <div className="wrapper-div">

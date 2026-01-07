@@ -3,9 +3,12 @@
 }
 
 .wrapper-div {
-  padding: 4px 8px;
-  padding-bottom: 8px;
+  position: sticky;
+  top: 0;
+  padding: 8px;
+  /* padding-bottom: 8px; */
   background-color: #ffffff;
+  z-index: 2;
   border-bottom: 1px solid var(--figma-color-border);
 }
 
